@@ -1,1 +1,1 @@
-vcs -f rtl_01.f -full64 -R -debug_access+all +v2k +notimingcheck -sverilog +define+$1 +define+CYCLE=$2
+vcs -f rtl_01.f -full64 -R -debug_access+all +v2k +incdir+/usr/cad/synopsys/synthesis/cur/dw/sim_ver +notimingcheck -sverilog +define+$1 +define+CYCLE=$2

@@ -1,0 +1,1 @@
+vcs -f rtl.f -full64 -R  +error+100 +v2k +incdir+/usr/cad/synopsys/synthesis/cur/dw/sim_ver -sverilog -debug_access+all +define+$1 | tee sim.log
