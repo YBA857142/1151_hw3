@@ -7,6 +7,8 @@
 `define RST_DELAY 2
 `define OUTPUT_SIZE 4096
 `define SDFFILE "../02_SYN/Netlist/core_syn.sdf"
+`define FSDB
+// `define SDF
 
 // tb0 is the invalid-barcode case. tb1--tb6 cover every K/precision pair.
 `ifdef tb0
@@ -141,8 +143,12 @@ module testbed;
         end
     end
 
-    initial clk = 1'b0;
-    always #(`CYCLE/2.0) clk = ~clk;
+    initial begin
+        clk = 1'b0;
+    end
+    always #(`CYCLE/2.0) begin 
+        clk = ~clk;
+    end
 
     initial begin
         rst_n = 1'b1;
@@ -171,6 +177,7 @@ module testbed;
 
     task send_word;
         input [31:0] word_value;
+        // $display("[INFO] Sending word %h at time %0t.", word_value, $time);
         begin
             @(negedge clk);
             in_valid = 1'b1;

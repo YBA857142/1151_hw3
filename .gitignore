@@ -1,3 +1,5 @@
 01_RTL/default.svf
 01_RTL/spyglass_violations.rpt
 01_RTL/sg_violations.rpt
+*.fsdb
+*.rc
