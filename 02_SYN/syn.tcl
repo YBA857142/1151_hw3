@@ -7,7 +7,7 @@ set designer {Student}
 
 
 
-set search_path      {"/share1/tech/CBDK_IC_Contest_v2.5/SynopsysDC/db  ../sram_256x8 ../sram_512x8 ../sram_4096x8 $search_path ../ ./"}
+set search_path      {"/share1/tech/CBDK_IC_Contest_v2.5/SynopsysDC/db  ../sram_256x8 ../sram_512x8 ../sram_4096x8 $search_path ../ ./ /home/raid7_2/course/cvsd/CBDK_IC_Contest/CIC/SynopsysDC/db"}
 set target_library   "slow.db                 \
                       sram_256x8_slow_syn.db  \
                       sram_512x8_slow_syn.db  \
@@ -34,6 +34,7 @@ alias h history
 
 analyze -format sverilog "flist.sv"
 elaborate $DESIGN
+# read_file -format verilog "flist.sv"
 current_design [get_designs $DESIGN]
 link
 
