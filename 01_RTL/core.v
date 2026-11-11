@@ -26,10 +26,8 @@ module core (                       //Don't modify interface
 
 
 	parameter SIZE_BIT = 6;
-	parameter SIZE = 1 << SIZE_BIT;
 	parameter BC_WIDTH = 46;
 	parameter DATA_WIDTH = 8;
-	parameter THRES = 6'd44;
 	parameter K_MAX = 5;
 	parameter MEM_CNT = 8;
 
@@ -41,10 +39,9 @@ module core (                       //Don't modify interface
 	parameter P54 = 46'b1101001110010001001100100100011001100011101011;
 	parameter P58 = 46'b1101001110010001001100100011001001100011101011;
 
-	
 	reg [DATA_WIDTH-1: 0] w_w [0: K_MAX-1][0: K_MAX-1], w_r [0: K_MAX-1][0: K_MAX-1];
 
-	reg state_w, state_r; // 0: read and find K, W, 1: convolution and output
+	reg [1: 0] state_w, state_r; // 0: read and find K, W, 1: convolution and output
 	reg [2: 0] sctr_w, sctr_r; 
 	reg [5: 0] col_ctr_w, col_ctr_r;
 	reg [5: 0] row_ctr_w, row_ctr_r;
@@ -52,7 +49,12 @@ module core (                       //Don't modify interface
 	reg done_w, done_r, done_2_w, done_2_r;
 	reg [4+2*SIZE_BIT - 1: 0] rec_w[0: 5], rec_r [0: 5]; // 0: 34, 1: 38, 2: 44, 3: 48, 4: 54, 5: 58, accm: 4, row: 6, col: 6
 	reg [BC_WIDTH - 1: 0] bc_w, bc_r;
+	reg [3: 0] k_size_w, k_size_r;
 
+	
+	reg [7: 0] win_w, win_r;
+	reg read_w, read_r;
+ 
 	reg [3:0] row_temp;
 
 	reg in_ready_w, in_ready_r;
@@ -123,7 +125,7 @@ module core (                       //Don't modify interface
 
 	always @(*) begin
 		case (state_r)
-			1'b0: begin 
+			2'b00: begin 
 				
 				for (i = 0; i < K_MAX; i = i + 1) begin
 					for (j = 0; j < K_MAX; j = j + 1) begin
@@ -132,7 +134,7 @@ module core (                       //Don't modify interface
 				end
 
 				if (done_2_r == 1'b1) begin
-					state_w = 1'b1;
+					state_w = 2'b01;
 				end
 				else begin
 					state_w = state_r;
@@ -150,7 +152,8 @@ module core (                       //Don't modify interface
 					row_ctr_w = row_ctr_r;
 					col_ctr_w = col_ctr_r;
 					bc_w = bc_r;
-					in_ready_w = (done_2_r == 1'b1) ? 1'b1 : 1'b0;
+					// in_ready_w = (done_2_r == 1'b1) ? 1'b1 : 1'b0;
+					in_ready_w = 1'b0;
 				end
 				two_last_row_w = last_row_r;
 				last_row_w = row_ctr_r;
@@ -219,30 +222,37 @@ module core (                       //Don't modify interface
 
 				out_data1_w = out_data1_r;
 				out_data2_w = out_data2_r;
+				k_size_w = k_size_r;
 				case ({KW34, KW38, KW44, KW48, KW54, KW58})
 					6'b100000: begin
 						out_data1_w = 8'd3;
 						out_data2_w = 8'd4;
+						k_size_w = 4'd3;
 					end
 					6'b010000: begin
 						out_data1_w = 8'd3;
 						out_data2_w = 8'd8;
+						k_size_w = 4'd3;
 					end
 					6'b001000: begin
 						out_data1_w = 8'd4;
 						out_data2_w = 8'd4;
+						k_size_w = 4'd4;
 					end
 					6'b000100: begin
 						out_data1_w = 8'd4;
 						out_data2_w = 8'd8;
+						k_size_w = 4'd4;
 					end
 					6'b000010: begin
 						out_data1_w = 8'd5;
 						out_data2_w = 8'd4;
+						k_size_w = 4'd5;
 					end
 					6'b000001: begin
 						out_data1_w = 8'd5;
 						out_data2_w = 8'd8;
+						k_size_w = 4'd5;
 					end
 				endcase
 				
@@ -265,11 +275,11 @@ module core (                       //Don't modify interface
 				end
 				cen_w[row_ctr_r[2:0]] = (i_in_valid == 1'b1) ? 1'b0 : 1'b1;
 				
-				row_temp = (row_ctr_r[2:0] == 3'd0) ? 3'd7 : row_ctr_r[2:0] - 1'b1;
-				cen_w[row_temp] = (i_in_valid == 1'b1 && col_ctr_r == 6'd0) ? 1'b0 : 1'b1;
+				// row_temp = (row_ctr_r[2:0] == 3'd0) ? 3'd7 : row_ctr_r[2:0] - 1'b1;
+				// cen_w[row_temp] = (i_in_valid == 1'b1 && col_ctr_r == 6'd0) ? 1'b0 : 1'b1;
 
 				wen_w[row_ctr_r[2:0]] = 1'b0;
-				wen_w[row_temp] = (i_in_valid == 1'b1 && col_ctr_r == 6'd0) ? 1'b0 : 1'b1;
+				// wen_w[row_temp] = (i_in_valid == 1'b1 && col_ctr_r == 6'd0) ? 1'b0 : 1'b1;
 
 				addr_w[row_ctr_r[2:0]] = {row_ctr_r[5:3], col_ctr_r};
 				data_w[row_ctr_r[2:0]] = i_in_data[(3-sctr_r)*DATA_WIDTH+: DATA_WIDTH];
@@ -277,17 +287,53 @@ module core (                       //Don't modify interface
 				tempdata_w = tempdata_r;
 			end
 
-			1'b1: begin
+			2'b01: begin
+				
 				
 				for (i = 0; i < K_MAX; i = i + 1) begin
 					for (j = 0; j < K_MAX; j = j + 1) begin
 						w_w[i][j] = w_r[i][j];
 					end
 				end
+				if (i_in_valid == 1'b1) begin
+					sctr_w = (sctr_r == 3'd3) ? 3'd0 : sctr_r + 1'b1;
+					
+					case (k_size_r)
+						4'd3: begin
+							w_w[1+row_ctr_r[2:0]][1+col_ctr_r[2:0]] = i_in_data[(3-sctr_r)*DATA_WIDTH+: DATA_WIDTH];
+							col_ctr_w = (col_ctr_r == 6'd2) ? 6'd0 : col_ctr_r + 1'b1;
+							row_ctr_w = (col_ctr_r == 6'd2) ? row_ctr_r + 1'b1 : row_ctr_r;
+						end
+						4'd4: begin
+							w_w[1+row_ctr_r[2:0]][1+col_ctr_r[2:0]] = i_in_data[(3-sctr_r)*DATA_WIDTH+: DATA_WIDTH];
+							col_ctr_w = (col_ctr_r == 6'd3) ? 6'd0 : col_ctr_r + 1'b1;
+							row_ctr_w = (col_ctr_r == 6'd3) ? row_ctr_r + 1'b1 : row_ctr_r;
+						end
+						4'd5: begin
+							w_w[row_ctr_r[2:0]][col_ctr_r[2:0]] = i_in_data[(3-sctr_r)*DATA_WIDTH+: DATA_WIDTH];
+							col_ctr_w = (col_ctr_r == 6'd4) ? 6'd0 : col_ctr_r + 1'b1;
+							row_ctr_w = (col_ctr_r == 6'd4) ? row_ctr_r + 1'b1 : row_ctr_r;
+						end
+						default: begin
+							col_ctr_w = col_ctr_r;
+							row_ctr_w = row_ctr_r;
+						end
+					endcase
+					in_ready_w = (sctr_w == 3'd3) ? 1'b1 : 1'b0;
+				end
+				else begin
+					sctr_w = sctr_r;
+					col_ctr_w = 6'b0;
+					row_ctr_w = 6'b0;
+					in_ready_w = 1'b0;
+				end
 
-				state_w = state_r;
-				sctr_w = sctr_r;
-
+				if (row_ctr_r == {2'b0, k_size_r}) begin
+					state_w = 2'b10;
+				end
+				else begin
+					state_w = state_r;
+				end
 
 				done_w = done_r;
 				done_2_w = done_2_r;
@@ -295,8 +341,9 @@ module core (                       //Don't modify interface
 					rec_w[i] = rec_r[i];
 				end
 				bc_w = bc_r;
+				k_size_w = k_size_r;
 
-				in_ready_w = in_ready_r;
+				// in_ready_w = in_ready_r;
 
 				out_data1_w = out_data1_r;
 				out_data2_w = out_data2_r;
@@ -319,24 +366,17 @@ module core (                       //Don't modify interface
 					addr_w[i] = addr_r[i];
 					data_w[i] = data_r[i];
 				end
-				cen_w[row_ctr_r[2:0]] = 1'b0;
-
-				row_temp = (row_ctr_r[2:0] == 3'd0) ? 3'd7 : row_ctr_r[2:0] - 1'b1;
-				cen_w[row_temp] = (col_ctr_r == 6'd0) ? 1'b0 : 1'b1;
+				last_row_w = last_row_r;
+				two_last_row_w = two_last_row_r;
 				
-				wen_w[row_ctr_r[2:0]] = 1'b1;
+				tempdata_w = tempdata_r;
 
-				addr_w[row_ctr_r[2:0]] = {row_ctr_r[5:3], col_ctr_r};
-
-				row_ctr_w = (col_ctr_r == 6'd63) ? row_ctr_r + 1'b1 : row_ctr_r;
-				col_ctr_w = (col_ctr_r == 6'd63) ? 6'd0 : col_ctr_r + 1'b1;
-				last_row_w = row_ctr_r;
-				two_last_row_w = last_row_r;
-				
-				tempdata_w = sram_q[two_last_row_r[2:0]];
-
-				exe_finish_w = (row_ctr_r == 6'd63 && col_ctr_r == 6'd63) ? 1'b1 : 1'b0;
+				exe_finish_w = (row_ctr_r == {2'b0, k_size_r}) ? 1'b1 : 1'b0;
 			end
+
+			// 2'b10: begin
+			// end
+
 			default: begin
 				for (i = 0; i < K_MAX; i = i + 1) begin
 					for (j = 0; j < K_MAX; j = j + 1) begin
@@ -356,6 +396,7 @@ module core (                       //Don't modify interface
 					rec_w[i] = rec_r[i];
 				end
 				bc_w = bc_r;
+				k_size_w = k_size_r;
 
 				in_ready_w = in_ready_r;
 
@@ -397,7 +438,7 @@ module core (                       //Don't modify interface
 				end
 			end
 
-			state_r <= 1'b0;
+			state_r <= 2'b00;
 			sctr_r <= 3'b0;
 			col_ctr_r <= 6'b0;
 			row_ctr_r <= 6'b0;
@@ -409,6 +450,7 @@ module core (                       //Don't modify interface
 				rec_r[i] <= {(2*SIZE_BIT + 4){1'b0}};
 			end
 			bc_r <= {BC_WIDTH{1'b0}};
+			k_size_r <= 4'b0;
 
 			in_ready_r <= 1'b0;
 
@@ -457,6 +499,7 @@ module core (                       //Don't modify interface
 				rec_r[i] <= rec_w[i];
 			end
 			bc_r <= bc_w;
+			k_size_r <= k_size_w;
 
 			in_ready_r <= in_ready_w;
 
