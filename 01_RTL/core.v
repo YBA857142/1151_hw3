@@ -102,30 +102,40 @@ module core (                       //Don't modify interface
 	wire KW58;
 	assign KW58 = (rec_r[5][2*SIZE_BIT+: 4] == 4'd10) ? 1'b1 : 1'b0;
 
-	wire [2: 0] b_ind[0: 7], tlb_ind[0: 7];
-	assign b_ind[0] = col_ctr_r - 3'd2;
-	assign tlb_ind[0] = two_last_col_r - 3'd2;
+	wire [5: 0] b_ind[0: 7];
+	wire [2: 0] tlb_ind[0: 7];
+	wire leg[0: 7];
+	assign b_ind[0] = row_ctr_r - 3'd2;
+	assign tlb_ind[0] = two_last_row_r - 3'd2;
+	assign leg[0] = (two_last_row_r >= 3'd2);
 
-	assign b_ind[1] = col_ctr_r - 3'd1;
-	assign tlb_ind[1] = two_last_col_r - 3'd1;
+	assign b_ind[1] = row_ctr_r - 3'd1;
+	assign tlb_ind[1] = two_last_row_r - 3'd1;
+	assign leg[1] = (two_last_row_r >= 3'd1);
 
-	assign b_ind[2] = col_ctr_r;
-	assign tlb_ind[2] = two_last_col_r;
+	assign b_ind[2] = row_ctr_r;
+	assign tlb_ind[2] = two_last_row_r;
+	assign leg[2] = (two_last_row_r <= 6'd63);
 
-	assign b_ind[3] = col_ctr_r + 3'd1;
-	assign tlb_ind[3] = two_last_col_r + 3'd1;
+	assign b_ind[3] = row_ctr_r + 3'd1;
+	assign tlb_ind[3] = two_last_row_r + 3'd1;
+	assign leg[3] = ({1'b0, two_last_row_r} <= 7'd62);
 
-	assign b_ind[4] = col_ctr_r + 3'd2;
-	assign tlb_ind[4] = two_last_col_r + 3'd2;
+	assign b_ind[4] = row_ctr_r + 3'd2;
+	assign tlb_ind[4] = two_last_row_r + 3'd2;
+	assign leg[4] = ({1'b0, two_last_row_r} <= 7'd61);
 
-	assign b_ind[5] = col_ctr_r + 3'd3;
-	assign tlb_ind[5] = two_last_col_r + 3'd3;
+	assign b_ind[5] = row_ctr_r + 3'd3;
+	assign tlb_ind[5] = two_last_row_r + 3'd3;
+	assign leg[5] = ({1'b0, two_last_row_r} <= 7'd60);
 
-	assign b_ind[6] = col_ctr_r + 3'd4;
-	assign tlb_ind[6] = two_last_col_r + 3'd4;
+	assign b_ind[6] = row_ctr_r + 3'd4;
+	assign tlb_ind[6] = two_last_row_r + 3'd4;
+	assign leg[6] = ({1'b0, two_last_row_r} <= 7'd59);
 
-	assign b_ind[7] = col_ctr_r + 3'd5;
-	assign tlb_ind[7] = two_last_col_r + 3'd5;
+	assign b_ind[7] = row_ctr_r + 3'd5;
+	assign tlb_ind[7] = two_last_row_r + 3'd5;
+	assign leg[7] = ({1'b0, two_last_row_r} <= 7'd58);
 
 	assign o_in_ready = in_ready_r;
 
@@ -481,7 +491,7 @@ module core (                       //Don't modify interface
 						end
 					end
 					for (j = 0; j < 8; j = j + 1) begin
-							win_w[4][j] = sram_q[tlb_ind[j]];
+							win_w[4][j] = leg[j] ? sram_q[tlb_ind[j]] : 8'b0;
 					end
 				end
 
@@ -512,10 +522,10 @@ module core (                       //Don't modify interface
 					cen_w[i] = 1'b0;
 					wen_w[i] = 1'b1;
 					if (sctr_r == 3'd4) begin
-						addr_w[b_ind[i]] = {row_ctr_r[5:3], col_ctr_r+6'd4};
+						addr_w[b_ind[i][2:0]] = {b_ind[i][5:3], col_ctr_r+3'd4}; //row+i-2
 					end
 					else begin
-						addr_w[b_ind[i]] = {row_ctr_r[5:3], 3'b0, sctr_r[2:0]};
+						addr_w[b_ind[i][2:0]] = {b_ind[i][5:3], 3'b0, sctr_r[2:0]};
 					end
 					data_w[i] = data_r[i];
 				end
