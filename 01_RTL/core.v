@@ -475,8 +475,8 @@ module core (                       //Don't modify interface
 				last_col_w = col_ctr_r;
 				two_last_col_w = last_col_r;
 				
-				done_w = done_r; 
-				done_2_w = done_2_r;
+				done_w = (row_ctr_r == 6'd60 && col_ctr_r == 6'd63) ? 1'b1 : 1'b0; 
+				done_2_w = done_r;
 				for (i = 0; i < 6; i = i + 1) begin
 					rec_w[i] = rec_r[i];
 				end //fx
@@ -524,18 +524,18 @@ module core (                       //Don't modify interface
 				out_data3_w = out_data_raw[2];
 				out_data4_w = out_data_raw[3];
 
-				out_addr1_w = {two_last_row_r, two_last_col_r};
-				out_addr2_w = {two_last_row_r + 3'd1, two_last_col_r};
-				out_addr3_w = {two_last_row_r + 3'd2, two_last_col_r};
-				out_addr4_w = {two_last_row_r + 3'd3, two_last_col_r};
+				out_addr1_w = {last_row_r, last_col_r};
+				out_addr2_w = {last_row_r + 3'd1, last_col_r};
+				out_addr3_w = {last_row_r + 3'd2, last_col_r};
+				out_addr4_w = {last_row_r + 3'd3, last_col_r};
 
-				out_valid1_w = (bctr_r >= 7'd7 || bctr_r <= 7'd1) ? 1'b1 : 1'b0;
-				out_valid2_w = (bctr_r >= 7'd7 || bctr_r <= 7'd1) ? 1'b1 : 1'b0;
-				out_valid3_w = (bctr_r >= 7'd7 || bctr_r <= 7'd1) ? 1'b1 : 1'b0;
-				out_valid4_w = (bctr_r >= 7'd7 || bctr_r <= 7'd1) ? 1'b1 : 1'b0;
+				out_valid1_w = (bctr_r >= 7'd5 || (bctr_r == 7'd0 && (row_ctr_r > 6'd0 || done_r == 1'b1))) ? 1'b1 : 1'b0;
+				out_valid2_w = (bctr_r >= 7'd5 || (bctr_r == 7'd0 && (row_ctr_r > 6'd0 || done_r == 1'b1))) ? 1'b1 : 1'b0;
+				out_valid3_w = (bctr_r >= 7'd5 || (bctr_r == 7'd0 && (row_ctr_r > 6'd0 || done_r == 1'b1))) ? 1'b1 : 1'b0;
+				out_valid4_w = (bctr_r >= 7'd5 || (bctr_r == 7'd0 && (row_ctr_r > 6'd0 || done_r == 1'b1))) ? 1'b1 : 1'b0;
 				
 				// exe_finish_w = exe_finish_r;
-				exe_finish_w = (row_ctr_r == 6'd60 && col_ctr_r == 6'd63) ? 1'b1 : 1'b0;
+				exe_finish_w = done_2_r;
 
 				for (i = 0; i < MEM_CNT; i = i + 1) begin
 					addr_w[i] = addr_r[i];
@@ -604,7 +604,7 @@ module core (                       //Don't modify interface
 				out_valid3_w = 1'b0;
 				out_valid4_w = 1'b0;
 
-				exe_finish_w = (row_ctr_r == 6'd63 && col_ctr_r == 6'd63) ? 1'b1 : 1'b0;
+				exe_finish_w = exe_finish_r;
 
 				for (i = 0; i < MEM_CNT; i = i + 1) begin
 					cen_w[i] = 1'b0;
