@@ -1,0 +1,12 @@
+student ID: b11901013  
+
+Clock Period: 10 (ns)
+
+Execution cycles for tb1: 1105
+Execution cycles for tb2: 1105 
+Execution cycles for tb3: 1109 
+Execution cycles for tb4: 1109 
+Execution cycles for tb5: 1121
+Execution cycles for tb6: 1121 
+
+Area: 789140.259090  (um^2)
