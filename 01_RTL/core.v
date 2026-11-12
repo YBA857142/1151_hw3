@@ -44,7 +44,8 @@ module core (                       //Don't modify interface
 	reg [DATA_WIDTH-1: 0] w_w [0: K_MAX-1][0: K_MAX-1], w_r [0: K_MAX-1][0: K_MAX-1];
 
 	reg [1: 0] state_w, state_r; // 0: read and find K, W, 1: convolution and output
-	reg [2: 0] sctr_w, sctr_r; 
+	reg [2: 0] sctr_w, sctr_r;
+	reg [7: 0] bctr_w, bctr_r; 
 	reg [5: 0] col_ctr_w, col_ctr_r;
 	reg [5: 0] last_col_w, last_col_r, two_last_col_w, two_last_col_r;
 	reg [5: 0] row_ctr_w, row_ctr_r;
@@ -89,6 +90,25 @@ module core (                       //Don't modify interface
 		end
 	endgenerate
 
+	wire [7: 0] out_data_raw[0: 3];
+	generate
+		for (m = 0; m < 4; m = m + 1) begin: gen_mac
+			mac mac_inst(
+				.w0(w_r[0][0]), .w1(w_r[0][1]), .w2(w_r[0][2]), .w3(w_r[0][3]), .w4(w_r[0][4]),
+				.w5(w_r[1][0]), .w6(w_r[1][1]), .w7(w_r[1][2]), .w8(w_r[1][3]), .w9(w_r[1][4]),
+				.w10(w_r[2][0]), .w11(w_r[2][1]), .w12(w_r[2][2]), .w13(w_r[2][3]), .w14(w_r[2][4]),
+				.w15(w_r[3][0]), .w16(w_r[3][1]), .w17(w_r[3][2]), .w18(w_r[3][3]), .w19(w_r[3][4]),
+				.w20(w_r[4][0]), .w21(w_r[4][1]), .w22(w_r[4][2]), .w23(w_r[4][3]), .w24(w_r[4][4]),
+				.a0(win_r[0][m]), .a1(win_r[1][m]), .a2(win_r[2][m]), .a3(win_r[3][m]), .a4(win_r[4][m]),
+				.a5(win_r[0][m + 1]), .a6(win_r[1][m + 1]), .a7(win_r[2][m + 1]), .a8(win_r[3][m + 1]), .a9(win_r[4][m + 1]),
+				.a10(win_r[0][m + 2]), .a11(win_r[1][m + 2]), .a12(win_r[2][m + 2]), .a13(win_r[3][m + 2]), .a14(win_r[4][m + 2]),
+				.a15(win_r[0][m + 3]), .a16(win_r[1][m + 3]), .a17(win_r[2][m + 3]), .a18(win_r[3][m + 3]), .a19(win_r[4][m + 3]),
+				.a20(win_r[0][m + 4]), .a21(win_r[1][m + 4]), .a22(win_r[2][m + 4]), .a23(win_r[3][m + 4]), .a24(win_r[4][m + 4]),
+				.res(out_data_raw[m])
+			);
+		end
+	endgenerate
+
 	wire KW34;
 	assign KW34 = (rec_r[0][2*SIZE_BIT+: 4] == 4'd10) ? 1'b1 : 1'b0;
 	wire KW38;
@@ -119,23 +139,23 @@ module core (                       //Don't modify interface
 
 	assign b_ind[3] = row_ctr_r + 3'd1;
 	assign tlb_ind[3] = two_last_row_r + 3'd1;
-	assign leg[3] = ({1'b0, two_last_row_r} <= 7'd62);
+	assign leg[3] = (two_last_row_r <= 6'd62);
 
 	assign b_ind[4] = row_ctr_r + 3'd2;
 	assign tlb_ind[4] = two_last_row_r + 3'd2;
-	assign leg[4] = ({1'b0, two_last_row_r} <= 7'd61);
+	assign leg[4] = (two_last_row_r <= 6'd61);
 
 	assign b_ind[5] = row_ctr_r + 3'd3;
 	assign tlb_ind[5] = two_last_row_r + 3'd3;
-	assign leg[5] = ({1'b0, two_last_row_r} <= 7'd60);
+	assign leg[5] = (two_last_row_r <= 6'd60);
 
 	assign b_ind[6] = row_ctr_r + 3'd4;
 	assign tlb_ind[6] = two_last_row_r + 3'd4;
-	assign leg[6] = ({1'b0, two_last_row_r} <= 7'd59);
+	assign leg[6] = (two_last_row_r <= 6'd59);
 
 	assign b_ind[7] = row_ctr_r + 3'd5;
 	assign tlb_ind[7] = two_last_row_r + 3'd5;
-	assign leg[7] = ({1'b0, two_last_row_r} <= 7'd58);
+	assign leg[7] = (two_last_row_r <= 6'd58);
 
 	assign o_in_ready = in_ready_r;
 
@@ -185,9 +205,9 @@ module core (                       //Don't modify interface
 					row_ctr_w = row_ctr_r;
 					col_ctr_w = col_ctr_r;
 					bc_w = bc_r;
-					// in_ready_w = (done_2_r == 1'b1) ? 1'b1 : 1'b0;
 					in_ready_w = 1'b0;
 				end
+				bctr_w = bctr_r;
 				last_row_w = last_row_r;
 				two_last_row_w = two_last_row_r;
 				last_col_w = last_col_r;
@@ -333,6 +353,7 @@ module core (                       //Don't modify interface
 						w_w[i][j] = w_r[i][j];
 					end
 				end
+				bctr_w = bctr_r;
 				if (i_in_valid == 1'b1) begin
 					sctr_w = (sctr_r == 3'd3) ? 3'd0 : sctr_r + 1'b1;
 					
@@ -444,6 +465,7 @@ module core (                       //Don't modify interface
 
 				state_w = state_r;
 				sctr_w = (sctr_r == 3'd4) ? ((col_ctr_r == 6'd63) ? 3'd0 : sctr_r) : sctr_r + 1'b1;
+				bctr_w = (col_ctr_r == 6'd63) ? 7'd0 : bctr_r + 1'b1;
 
 				row_ctr_w = (col_ctr_r == 6'd63) ? row_ctr_r + 3'd4 : row_ctr_r;
 				last_row_w = row_ctr_r;
@@ -497,20 +519,20 @@ module core (                       //Don't modify interface
 
 				in_ready_w = 1'b0; //fx
 
-				out_data1_w = out_data1_r;
-				out_data2_w = out_data2_r;
-				out_data3_w = out_data3_r;
-				out_data4_w = out_data4_r;
+				out_data1_w = out_data_raw[0];
+				out_data2_w = out_data_raw[1];
+				out_data3_w = out_data_raw[2];
+				out_data4_w = out_data_raw[3];
 
-				out_addr1_w = out_addr1_r;
-				out_addr2_w = out_addr2_r;
-				out_addr3_w = out_addr3_r;
-				out_addr4_w = out_addr4_r;
+				out_addr1_w = {two_last_row_r, two_last_col_r};
+				out_addr2_w = {two_last_row_r + 3'd1, two_last_col_r};
+				out_addr3_w = {two_last_row_r + 3'd2, two_last_col_r};
+				out_addr4_w = {two_last_row_r + 3'd3, two_last_col_r};
 
-				out_valid1_w = 1'b0;
-				out_valid2_w = 1'b0;
-				out_valid3_w = 1'b0;
-				out_valid4_w = 1'b0;
+				out_valid1_w = (bctr_r >= 7'd7 || bctr_r <= 7'd1) ? 1'b1 : 1'b0;
+				out_valid2_w = (bctr_r >= 7'd7 || bctr_r <= 7'd1) ? 1'b1 : 1'b0;
+				out_valid3_w = (bctr_r >= 7'd7 || bctr_r <= 7'd1) ? 1'b1 : 1'b0;
+				out_valid4_w = (bctr_r >= 7'd7 || bctr_r <= 7'd1) ? 1'b1 : 1'b0;
 				
 				// exe_finish_w = exe_finish_r;
 				exe_finish_w = (row_ctr_r == 6'd60 && col_ctr_r == 6'd63) ? 1'b1 : 1'b0;
@@ -542,6 +564,7 @@ module core (                       //Don't modify interface
 
 				state_w = state_r;
 				sctr_w = sctr_r;
+				bctr_w = bctr_r;
 				row_ctr_w = row_ctr_r;
 				last_row_w = last_row_r;
 				two_last_row_w = two_last_row_r;
@@ -603,6 +626,7 @@ module core (                       //Don't modify interface
 
 			state_r <= 2'b00;
 			sctr_r <= 3'b0;
+			bctr_r <= 7'b0;
 			col_ctr_r <= 6'b0;
 			row_ctr_r <= 6'b0;
 			last_row_r <= 6'b0;
@@ -659,6 +683,7 @@ module core (                       //Don't modify interface
 
 			state_r <= state_w;
 			sctr_r <= sctr_w;
+			bctr_r <= bctr_w;
 			row_ctr_r <= row_ctr_w;
 			last_row_r <= last_row_w;
 			two_last_row_r <= two_last_row_w;

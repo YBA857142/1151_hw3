@@ -27,8 +27,8 @@ module mac (
         reg signed [8:0] a_s;
         reg signed [8:0] w_s;
         begin
-            a_s = {1'b0, a};
-            w_s = {w[7], w};
+            a_s = {9'b0, a};              // zero-extend unsigned a to 17 bits
+            w_s = {{9{w[7]}}, w};
             mul = a_s * w_s;
         end
     endfunction

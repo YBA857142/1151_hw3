@@ -1,4 +1,4 @@
-read_file -type verilog {core.v}
+read_file -type verilog {core.v mac.v}
 read_file -type gateslib {../sram_4096x8/sram_4096x8_slow_syn.lib ../sram_512x8/sram_512x8_slow_syn.lib ../sram_256x8/sram_256x8_slow_syn.lib}
 set_option top core
 current_goal Design_Read -top core
